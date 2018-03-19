@@ -1,5 +1,10 @@
 package main;
 
+/* 
+ *  This program generates a weka database file based on dalvik pairs using the 
+ *  Classification features from the Santos paper.
+ */
+
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
