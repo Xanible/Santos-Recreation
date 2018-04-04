@@ -96,7 +96,7 @@ public class Main {
 				List<String> opcodes = new ArrayList<String>(Arrays.asList(words));
 				
 				//Send file through sequencer
-				HashMap<String, Integer> sequencesCount = sequencesMasterList;
+				HashMap<String, Integer> sequencesCount = new HashMap<String,Integer>(sequencesMasterList);
 				int totalSequences = 0;
 				for(int i = 0;i < opcodes.size() - 1;i++) {
 					String s = opcodes.get(i) + " " + opcodes.get(i + 1);
@@ -112,7 +112,7 @@ public class Main {
 				}
 				
 				//Determine the Weighted Frequencies
-				HashMap<String, Double> sequencesWeighted = sequencesWeightedMasterList;
+				HashMap<String, Double> sequencesWeighted = new HashMap<String, Double>(sequencesWeightedMasterList);
 				for(String s: opcodePairList){
 					int count = sequencesCount.get(s);
 					double frequency = count/totalSequences;
@@ -168,7 +168,7 @@ public class Main {
 				List<String> opcodes = new ArrayList<String>(Arrays.asList(words));
 
 				//Send file through sequencer
-				HashMap<String, Integer> sequencesCount = sequencesMasterList;
+				HashMap<String, Integer> sequencesCount = new HashMap<String,Integer>(sequencesMasterList);
 				int totalSequences = 0;
 				for(int i = 0;i < opcodes.size() - 1;i++) {
 					String s = opcodes.get(i) + " " + opcodes.get(i + 1);
@@ -184,7 +184,7 @@ public class Main {
 				}
 
 				//Determine the Weighted Frequencies
-				HashMap<String, Double> sequencesWeighted = sequencesWeightedMasterList;
+				HashMap<String, Double> sequencesWeighted = new HashMap<String, Double>(sequencesWeightedMasterList);
 				for(String s: opcodePairList){
 					int count = sequencesCount.get(s);
 					double frequency = count/totalSequences;
