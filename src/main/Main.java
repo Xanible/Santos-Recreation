@@ -14,29 +14,27 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
+import java.text.DecimalFormat;
+import java.text.DecimalFormatSymbols;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Random;
+import java.util.Locale;
 
 public class Main {
 
 	public static void main(String[] args) throws IOException {
 		//Setup
 		HashMap<String, Double> opcodeWeights = new HashMap<String, Double>();
-		File malDir = new File("C:\\Users\\colby\\Desktop\\AndroidCT\\Cleaned Disassembly\\Malware");
-		File benDir = new File("C:\\Users\\colby\\Desktop\\AndroidCT\\Cleaned Disassembly\\Benign");
-		File[] malArray = malDir.listFiles();
-		File[] benArray = benDir.listFiles();
-		List<File> malFiles = new ArrayList<File>(Arrays.asList(malArray));
-		List<File> benFiles = new ArrayList<File>(Arrays.asList(benArray));
+		File malDir = new File("C:\\Users\\colby\\Desktop\\SCHOOL\\AndroidCT\\Cleaned Disassembly\\Malware");
+		File benDir = new File("C:\\Users\\colby\\Desktop\\SCHOOL\\AndroidCT\\Cleaned Disassembly\\Benign");
 
 		//Get opcode Weights from file
 		getWeights(opcodeWeights);
 		
 		//Read in list of pairs
-		BufferedReader br = new BufferedReader(new FileReader("C:/Users/colby/Desktop/School/ADCT/Dalvik_Opcode_Pair_List.txt"));
+		BufferedReader br = new BufferedReader(new FileReader("C:\\Users\\colby\\Desktop\\SCHOOL\\AndroidCT\\Pairing Lists\\Pair"  + 1 + ".txt"));
 		List<String> opcodePairList = new ArrayList<String>();
 		for (String line = br.readLine(); line != null; line = br.readLine()) {
 			opcodePairList.add(line);
@@ -54,11 +52,11 @@ public class Main {
 		}
 		
 		//Prepare the arff file
-		BufferedWriter arff = new BufferedWriter(new FileWriter("C:/Users/colby/Desktop/AndroidCT/Weighted_Sequences.arff"));
-		arff.write("@relation Malware-Benign");
+		BufferedWriter arff = new BufferedWriter(new FileWriter("C:/Users/colby/Desktop/SCHOOL/AndroidCT/Weighted_Sequences.arff"));
+		arff.write("@relation Benign-Malware");
 		arff.newLine();
 		arff.newLine();
-		arff.write("@attribute @@class@@ {Malware,Benign}");
+		arff.write("@attribute @@class@@ {Benign,Malware}");
 		arff.newLine();
 		for(String s: opcodePairList){
 			arff.write("@attribute \"" + s + "\" numeric");
@@ -68,29 +66,41 @@ public class Main {
 		arff.write("@data");
 		arff.newLine();
 		
-		//Create list files for reference
-		BufferedWriter referList = new BufferedWriter(new FileWriter("C:/Users/colby/Desktop/AndroidCT/List of Files.txt"));
-		referList.write("Malware:");
-		referList.newLine();
-		
-		//Initialize random generator
-		Random randomGenerator = new Random();
+		//Read in List of files to test
+		BufferedReader br2 = new BufferedReader(new FileReader("C:\\Users\\colby\\Desktop\\SCHOOL\\AndroidCT\\File Lists\\Master List.txt"));
+		List<String> malFileList = new ArrayList<String>();
+		List<String> benFileList = new ArrayList<String>();
+		br2.readLine();
+		int incrementer = 1;
+		for (String line = br2.readLine(); line != null; line = br2.readLine()) {
+			if(incrementer < 1001) {
+				malFileList.add(line);
+				incrementer++;
+			} else if(incrementer == 1001) {
+				System.out.println(line);
+				br2.readLine();
+				benFileList.add(br2.readLine());
+				incrementer++;
+			} else {
+				benFileList.add(line);
+				incrementer++;
+			}
+		}
+		br2.close();	
+
 		
 		//Sequencing loops
-		for(int counter = 0; counter < 1000; counter++) {
+		int counter = 1;
+		for(String s: malFileList) {
 			System.out.println(counter);
 			try {
-				//Get a random file
-				int index = randomGenerator.nextInt(malFiles.size());
-				File f = malFiles.get(index);
-				malFiles.remove(index);
-				
 				//Output file name
-				referList.write(f.getName());
-				System.out.println(f.getName());
-				referList.newLine();
+				System.out.println(s);
 				
 				//Read in a file
+				String filePath = malDir.getPath() + "\\" +s;
+				File f = new File(filePath);
+				
 				List<String> theFile = Files.readAllLines(f.toPath(), Charset.defaultCharset() );
 				String[] words = theFile.get(0).split(" ");
 				List<String> opcodes = new ArrayList<String>(Arrays.asList(words));
@@ -99,70 +109,73 @@ public class Main {
 				HashMap<String, Integer> sequencesCount = new HashMap<String,Integer>(sequencesMasterList);
 				int totalSequences = 0;
 				for(int i = 0;i < opcodes.size() - 1;i++) {
-					String s = opcodes.get(i) + " " + opcodes.get(i + 1);
-					if(sequencesCount.containsKey(s)) {
-						int currentVal = sequencesCount.get(s);
+					String o = opcodes.get(i) + " " + opcodes.get(i + 1);
+					if(sequencesCount.containsKey(o)) {
+						int currentVal = sequencesCount.get(o);
 						currentVal++;
-						sequencesCount.put(s, currentVal);
+						sequencesCount.put(o, currentVal);
 						totalSequences++;
 					} else {
-						System.out.println(s);
+						System.out.println(o);
 						System.exit(0);
 					}
 				}
 				
 				//Determine the Weighted Frequencies
 				HashMap<String, Double> sequencesWeighted = new HashMap<String, Double>(sequencesWeightedMasterList);
-				for(String s: opcodePairList){
-					int count = sequencesCount.get(s);
-					double frequency = count/totalSequences;
-					String[] opcodesInPair = s.split(" ");
+				for(String op: opcodePairList){
+					int count = sequencesCount.get(op);
+					double frequency = ((double) count)/totalSequences;
+					String[] opcodesInPair = op.split(" ");
 					double opcode1Weight, opcode2Weight;
 					if(opcodeWeights.containsKey(opcodesInPair[0])){
 						opcode1Weight = opcodeWeights.get(opcodesInPair[0]);
 					}else {
 						opcode1Weight = 0;
+						System.out.println(opcodesInPair[0]);
 					}
 					if(opcodeWeights.containsKey(opcodesInPair[1])){
 						opcode2Weight = opcodeWeights.get(opcodesInPair[1]);
 					}else {
 						opcode2Weight = 0;
+						System.out.println(opcodesInPair[1]);
 					}
 					double part = (opcode1Weight/100) * (opcode2Weight/100);
 					double weightedFrequency = frequency * part;
-					sequencesWeighted.put(s, weightedFrequency);
+					sequencesWeighted.put(op, weightedFrequency);
 				}
 				
 				
 				//Print out sequence frequency file
 				arff.write("Malware");
-				for(String s: opcodePairList){
-					arff.write("," + Double.toString(sequencesWeighted.get(s)));
+				for(String op: opcodePairList){
+					DecimalFormat df = new DecimalFormat("0", DecimalFormatSymbols.getInstance(Locale.ENGLISH));
+					df.setMaximumFractionDigits(340); // 340 = DecimalFormat.DOUBLE_FRACTION_DIGITS
+
+					double scale = 100000000000000.0;
+					arff.write("," + df.format(sequencesWeighted.get(op) * scale));
 				}
 				arff.newLine();
+				counter++;
 				
 			} catch (IOException e) {
 				System.out.println("Error reading from malware file!");
+				e.printStackTrace();
 			}
 		}
-
-		referList.newLine();
-		referList.write("Benign:");
-		referList.newLine();
 		
-		for(int counter = 0; counter < 1000; counter++) {
+		//Benign
+		counter = 1;
+		for(String s: benFileList) {
 			System.out.println(counter);
 			try {
-				//Get a random file
-				int index = randomGenerator.nextInt(benFiles.size());
-				File f = benFiles.get(index);
-				benFiles.remove(index);
-				
 				//Output file name
-				referList.write(f.getName());
-				referList.newLine();
+				System.out.println(s);
 				
 				//Read in a file
+				String filePath = benDir.getPath() + "\\" +s;
+				File f = new File(filePath);
+				
 				List<String> theFile = Files.readAllLines(f.toPath(), Charset.defaultCharset() );
 				String[] words = theFile.get(0).split(" ");
 				List<String> opcodes = new ArrayList<String>(Arrays.asList(words));
@@ -171,24 +184,24 @@ public class Main {
 				HashMap<String, Integer> sequencesCount = new HashMap<String,Integer>(sequencesMasterList);
 				int totalSequences = 0;
 				for(int i = 0;i < opcodes.size() - 1;i++) {
-					String s = opcodes.get(i) + " " + opcodes.get(i + 1);
-					if(sequencesCount.containsKey(s)) {
-						int currentVal = sequencesCount.get(s);
+					String o = opcodes.get(i) + " " + opcodes.get(i + 1);
+					if(sequencesCount.containsKey(o)) {
+						int currentVal = sequencesCount.get(o);
 						currentVal++;
-						sequencesCount.put(s, currentVal);
+						sequencesCount.put(o, currentVal);
 						totalSequences++;
 					} else {
-						System.out.println(s);
+						System.out.println(o);
 						System.exit(0);
 					}
 				}
 
 				//Determine the Weighted Frequencies
 				HashMap<String, Double> sequencesWeighted = new HashMap<String, Double>(sequencesWeightedMasterList);
-				for(String s: opcodePairList){
-					int count = sequencesCount.get(s);
-					double frequency = count/totalSequences;
-					String[] opcodesInPair = s.split(" ");
+				for(String op: opcodePairList){
+					int count = sequencesCount.get(op);
+					double frequency = ((double) count)/totalSequences;
+					String[] opcodesInPair = op.split(" ");
 					double opcode1Weight, opcode2Weight;
 					if(opcodeWeights.containsKey(opcodesInPair[0])){
 						opcode1Weight = opcodeWeights.get(opcodesInPair[0]);
@@ -202,16 +215,21 @@ public class Main {
 					}
 					double part = (opcode1Weight/100) * (opcode2Weight/100);
 					double weightedFrequency = frequency * part;
-					sequencesWeighted.put(s, weightedFrequency);
+					sequencesWeighted.put(op, weightedFrequency);
 				}
 
 
 				//Print out sequence frequency file
 				arff.write("Benign");
-				for(String s: opcodePairList){
-					arff.write("," + Double.toString(sequencesWeighted.get(s)));
+				for(String op: opcodePairList){
+					DecimalFormat df = new DecimalFormat("0", DecimalFormatSymbols.getInstance(Locale.ENGLISH));
+					df.setMaximumFractionDigits(340); // 340 = DecimalFormat.DOUBLE_FRACTION_DIGITS
+
+					double scale = 100000000000000.0;
+					arff.write("," + df.format(sequencesWeighted.get(op) * scale));
 				}
 				arff.newLine();
+				counter++;
 
 			} catch (IOException e) {
 				System.out.println("Error reading from benign file!");
@@ -219,7 +237,6 @@ public class Main {
 			}
 		}
 		arff.close();
-		referList.close();
 	}
 
 	public static void getWeights(HashMap<String, Double> opcodeWeights) {
